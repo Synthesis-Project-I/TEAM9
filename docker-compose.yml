@@ -1,0 +1,22 @@
+services:
+  web:
+    build: ./web
+    container_name: web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000
+    depends_on:
+      - api
+
+  api:
+    build: ./API/
+    container_name: api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./API/:/app/
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
