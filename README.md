@@ -1,6 +1,5 @@
 # TEAM9
 
-# TEAM 9
 # Translator Assignment Recommendation System (TARS)
 
 ---
@@ -11,7 +10,6 @@
 3. [File Structure](#file-structure)
 4. [Data Schema Reference](#data-schema-reference)
 5. [Development Workflow](#development-workflow)
-6. [Contribution Guidelines](#contribution-guidelines)
 
 ---
 
@@ -197,15 +195,3 @@ To run the UI and the API in development mode (with live refreshing of code) run
 ```bash
 docker compose up --build
 ```
-
----
-
-## Contribution Guidelines
-
-- Write docstrings for every public function (Google style preferred)
-- Keep pipeline stage files thin — heavy logic belongs in root-level `utils/` or as dedicated helper functions within the stage file itself
-- All new pipeline behaviour needs at least one unit test in `tests/`
-- Update `agents.md` every time you use an LLM to help with the project (see that file)
-- Pin new Python dependencies in `requirements.txt` with exact versions; pin JS dependencies via `package-lock.json`
-- The `web/` frontend communicates with the backend only through `src/api/` — never call pipeline functions directly from the frontend
-- Never commit trained model files from `model_training/` experiments directly to `models/` — only finalized, intentionally versioned artifacts belong there
