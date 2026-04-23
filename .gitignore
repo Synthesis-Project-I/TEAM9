@@ -1,0 +1,21 @@
+# Web dependencies
+web/node_modules/
+web/dist/
+web/.vite/
+web/.env
+web/*.local
+
+# API
+API/__pycache__/
+API/*.pyc
+API/.venv/
+API/venv/
+API/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

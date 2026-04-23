@@ -1,10 +1,19 @@
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins (for development only)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 def get_db_connection():
-    conn = sqlite3.connect(".data/database.db")
+    conn = sqlite3.connect("./data/database.db")
     conn.row_factory = sqlite3.Row  # returns dict-like rows
     return conn
 
@@ -15,7 +24,7 @@ def read_root():
 @app.get("/translators")
 def get_translators(
     page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=100),
+    per_page: int = Query(10, ge=1, le=200),
     sort_by: str = Query("index"),
     asc: bool = Query(True)
 ):

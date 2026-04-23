@@ -1,0 +1,101 @@
+,CLIENT_NAME,SELLING_HOURLY_PRICE,MIN_QUALITY,WILDCARD
+0,Accesstra,25,7.0,Quality
+1,CureEquip Co.,20,7.5,Price
+2,CyberWise,20,8.0,Quality
+3,DataDriven Dynamics,25,0.0,Deadline
+4,DataWise,20,8.0,Price
+5,Diamond Designs,25,7.5,Price
+6,Direct Supply,20,0.0,Deadline
+7,DriveCore,25,7.5,Deadline
+8,DynaTech,25,7.0,Deadline
+9,Dynax Inc,25,7.0,Price
+10,EcoFuture,45,7.0,Price
+11,EcoHealth Solutions,20,0.0,Price
+12,EduManufacturing,20,7.0,Deadline
+13,El Ammo Bandito,30,7.0,Deadline
+14,Electrindustries,30,8.0,Price
+15,ElectroForge,25,7.5,Deadline
+16,Elite Industrial,25,0.0,Deadline
+17,Elite Medical Solutions,25,0.0,Price
+18,EmergeTech Enterprises,25,7.5,Price
+19,Empyrean Dynamics,25,8.0,Quality
+20,EnviroSafe,25,7.5,Quality
+21,Envoque,35,7.0,Deadline
+22,EquipMaxx Dynamics,20,0.0,Price
+23,EquipMed Innovations,25,0.0,Deadline
+24,Exergy Systems,25,8.0,Deadline
+25,FabricatePro,25,7.0,Quality
+26,FarmWorks Corp.,25,7.5,Price
+27,FastCom,20,7.0,Quality
+28,FirstLine Solutions,25,0.0,Deadline
+29,Fizzy Works,20,7.0,Quality
+30,FlowMotion,20,0.0,Deadline
+31,Fluid,25,8.0,Quality
+32,Fortune Falls Casinos,25,7.5,Deadline
+33,FreshBites Inc,25,7.5,Price
+34,FusionWorks Industrial Solutions,25,0.0,Deadline
+35,FutureBuild,25,7.0,Deadline
+36,FutureTechSys,25,7.0,Deadline
+37,FutureWorks Engineering,30,7.0,Price
+38,GearGenius,20,8.0,Quality
+39,GearMaster,20,7.5,Quality
+40,GlamorCorp,25,0.0,Deadline
+41,Global Gear,30,0.0,Price
+42,Gourmet Goodness,30,8.0,Price
+43,Grandeur Co,25,0.0,Price
+44,GreenNet,25,7.0,Quality
+45,GreenPath,50,8.0,Quality
+46,Hands-On Industries,20,0.0,Deadline
+47,HappyCampers,25,8.0,Deadline
+48,Havenly Homes,25,7.5,Quality
+49,HealthAid,20,7.0,Deadline
+50,HealthEquip Solutions,25,7.0,Deadline
+51,HealthEssential Inc.,20,7.0,Quality
+52,HealthLogic,25,7.5,Deadline
+53,HealthMate,40,8.0,Quality
+54,HealthShapers,25,7.0,Deadline
+55,HealthSolutions Corp.,25,0.0,Deadline
+56,HealthWise Industries,20,0.0,Price
+57,Healthy Spaces,25,7.0,Price
+58,High Rollers Casino Co.,25,0.0,Price
+59,Hightech Solutions,20,7.5,Deadline
+60,Horizon Industrial,25,0.0,Deadline
+61,Horizon Industries,25,7.0,Price
+62,Hydronova,30,7.5,Deadline
+63,HydroWorks,25,7.0,Deadline
+64,Indauto,35,7.0,Quality
+65,InduDrive,45,7.0,Price
+66,IndusLegal Solutions,20,0.0,Deadline
+67,Indusonics,35,0.0,Deadline
+68,Industrial Builders,25,0.0,Deadline
+69,Industrial Connect,25,7.0,Price
+70,IndustrialEdX,20,0.0,Deadline
+71,IndustrialFirst National Bank,25,7.5,Deadline
+72,IndustrialPro,25,7.5,Price
+73,IndustrialSoft,25,7.5,Price
+74,Industrify,40,7.0,Quality
+75,Industrisecure,25,7.0,Price
+76,InduTech,35,0.0,Deadline
+77,InduTrain,25,7.5,Deadline
+78,InfraForge,20,7.0,Deadline
+79,InfraGeniusx,25,7.0,Price
+80,InfraTech,25,7.0,Quality
+81,InfraTechx,40,7.5,Quality
+82,InnoTech Solutions,25,8.0,Deadline
+83,InnovaciónNet,20,7.5,Price
+84,Innovex,25,7.5,Quality
+85,InnoVisionx,30,7.0,Quality
+86,Integracon,45,7.0,Deadline
+87,IntellaTech,25,7.0,Deadline
+88,InterActive Concepts,25,7.5,Price
+89,IntraSoft,25,8.0,Deadline
+90,Ironclad Industrial,45,8.0,Quality
+91,Ironclad Manufacturing,20,7.0,Deadline
+92,IronWorx,20,8.0,Deadline
+93,IT Minds Consulting,25,7.0,Deadline
+94,Joyful,40,7.5,Quality
+95,Kalampur,25,0.0,Price
+96,LabTech Innovations,20,7.5,Price
+97,Landmark Industries,45,0.0,Price
+98,LifeEquip Dynamics,25,7.0,Price
+99,LifeEquip Solutions,25,7.0,Deadline
