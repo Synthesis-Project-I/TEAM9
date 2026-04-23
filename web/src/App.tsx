@@ -5,6 +5,8 @@ import Translators from "./app/translators/page.tsx"
 import Dashboard from "./app/dashboard/page.tsx"
 import Clients from "./app/clients/page.tsx"
 import Tasks from "./app/tasks/page.tsx"
+import QuickCreate from "./app/quickCreate/page.tsx"
+import Assign from "./app/assign/page.tsx"
 
 export default function App() {
   return (
@@ -14,6 +16,8 @@ export default function App() {
         <Route path="/translators" element={<Translators />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/quickCreate" element={<QuickCreate />} />
+        <Route path="/assign" element={<Assign />} />
       </Route >
     </Routes>
   )

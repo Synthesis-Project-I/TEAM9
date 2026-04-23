@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { SiteHeader } from "@/components/site-header"
 import {
   SidebarInset,
