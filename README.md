@@ -1,5 +1,4 @@
-# TEAM9
-
+# TEAM 9
 # Translator Assignment Recommendation System (TARS)
 
 ---
@@ -10,6 +9,7 @@
 3. [File Structure](#file-structure)
 4. [Data Schema Reference](#data-schema-reference)
 5. [Development Workflow](#development-workflow)
+6. [Contribution Guidelines](#contribution-guidelines)
 
 ---
 
@@ -184,10 +184,35 @@ cp .env.example .env
 
 
 ### Running the pipeline #TODO
-How to run the pipeline?
+Create a task JSON file with the fields below and run the CLI entrypoint:
+
+```json
+{
+  "company_name": "Appcelerate",
+  "task_date": "2024-10-10",
+  "task_deadline": "2024-10-12",
+  "task_start_time": "09:00",
+  "task_end_time": "17:00",
+  "task_length_hours": 3.5,
+  "language_pair": "English_Spanish (LA)",
+  "task_type": "ProofReading"
+}
+```
+
+```bash
+python scripts/run_pipeline.py task.json
+```
+
+To rebuild the processed translator statistics file from `data/interim/`, run:
+
+```bash
+python data/processing_scripts/build_translator_statistics.py
+```
 
 ### Running tests #TODO
-How to run tests?
+```bash
+python -m pytest -q
+```
 
 ### Web and API development
 To run the UI and the API in development mode (with live refreshing of code) run:
@@ -195,3 +220,15 @@ To run the UI and the API in development mode (with live refreshing of code) run
 ```bash
 docker compose up --build
 ```
+
+---
+
+## Contribution Guidelines
+
+- Write docstrings for every public function (Google style preferred)
+- Keep pipeline stage files thin — heavy logic belongs in root-level `utils/` or as dedicated helper functions within the stage file itself
+- All new pipeline behaviour needs at least one unit test in `tests/`
+- Update `agents.md` every time you use an LLM to help with the project (see that file)
+- Pin new Python dependencies in `requirements.txt` with exact versions; pin JS dependencies via `package-lock.json`
+- The `web/` frontend communicates with the backend only through `src/api/` — never call pipeline functions directly from the frontend
+- Never commit trained model files from `model_training/` experiments directly to `models/` — only finalized, intentionally versioned artifacts belong there
