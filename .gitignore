@@ -6,7 +6,9 @@ web/.env
 web/*.local
 
 # Data
-data/
+data/raw/
+data/interim/
+data/processed/
 
 # Python
 __pycache__/
