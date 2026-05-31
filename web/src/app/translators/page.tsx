@@ -1,6 +1,15 @@
 import { DataTable } from "@/components/data-table"
-import { type ColumnDef } from "@tanstack/react-table"
-import React, { useState, useEffect } from 'react'
+import {
+  useSortable,
+} from "@dnd-kit/sortable"
+import {
+  type ColumnDef,
+} from "@tanstack/react-table"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { GripVerticalIcon } from "lucide-react"
+import { useState, useEffect } from 'react'
 
 function DragHandle({ id }: { id: number }) {
   const { attributes, listeners } = useSortable({
@@ -20,17 +29,6 @@ function DragHandle({ id }: { id: number }) {
     </Button>
   )
 }
-
-import {
-  useSortable,
-} from "@dnd-kit/sortable"
-import {
-  type ColumnDef,
-} from "@tanstack/react-table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { GripVerticalIcon } from "lucide-react"
 
 type Translator = {
   index: number
@@ -129,7 +127,8 @@ export default function Page() {
   const fetchData = async (page: number, size: number) => {
     setLoading(true)
     try {
-      const apiUrl = `http://casaalbertojuarez2.ddns.net:8000/translators?per_page=${pageSize}&page=${pageIndex}&sort_by=${sortBy}&asc=${asc}`
+      const apiBaseUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8010"
+      const apiUrl = `${apiBaseUrl}/translators?per_page=${pageSize}&page=${pageIndex}&sort_by=${sortBy}&asc=${asc}`
       const response = await fetch(apiUrl)
       const result = await response.json()
       // console.log(response)
@@ -154,7 +153,7 @@ export default function Page() {
   return (
     <>
       <DataTable 
-        data={data} 
+        data={data ?? []} 
         columns={columns} 
         enableDragAndDrop={false} 
         enableRowSelection={true} 

@@ -29,6 +29,7 @@ import {
   useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
+  type PaginationState,
   type Row,
   type SortingState,
   type VisibilityState,
@@ -114,9 +115,9 @@ function DragHandle({ id }: { id: number }) {
 }
 
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+function DraggableRow<TData>({ row }: { row: Row<TData> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
+    id: row.id,
   })
 
   return (
@@ -146,10 +147,10 @@ export function DataTable<TData extends Record<string, any>>({
   enableRowSelection = true,
   getRowId = (row: any) => row.id?.toString() || row.index?.toString() || Math.random().toString(),
   manualPagination = false,
-  onPaginationChange = null,
-  pageCount = null,
-  pageSize = null,
-  pageIndex = null
+  onPaginationChange,
+  pageCount,
+  pageSize,
+  pageIndex
 }: {
   data: TData[]
   columns: ColumnDef<TData, any>[]
@@ -157,7 +158,7 @@ export function DataTable<TData extends Record<string, any>>({
   enableRowSelection?: boolean
   getRowId?: (row: TData) => string
   manualPagination?: boolean
-  onPaginationChange?: (page: number, pageSize: number) => void
+  onPaginationChange?: (pagination: PaginationState) => void
   pageCount?: number
   pageSize?: number
   pageIndex?: number
@@ -181,9 +182,13 @@ export function DataTable<TData extends Record<string, any>>({
     useSensor(KeyboardSensor, {})
   )
 
+  React.useEffect(() => {
+    setData(initialData)
+  }, [initialData])
+
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
-    [data]
+    () => data?.map((row) => getRowId(row)) || [],
+    [data, getRowId]
   )
 
   const table = useReactTable({
@@ -205,7 +210,7 @@ export function DataTable<TData extends Record<string, any>>({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: manualPagination ? (updater) => {
-      const newState = updater(pagination)
+      const newState = typeof updater === "function" ? updater(pagination) : updater
       onPaginationChange?.(newState)
       setPagination(newState)
     } : setPagination,    
@@ -482,7 +487,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
+function TableCellViewer({ item }: { item: any }) {
   const isMobile = useIsMobile()
 
   return (

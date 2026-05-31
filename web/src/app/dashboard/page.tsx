@@ -22,7 +22,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 
-function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
+function TableCellViewer({ item }: { item: any }) {
   const isMobile = useIsMobile()
 
   return (
@@ -303,16 +303,17 @@ import { GripVerticalIcon, CircleCheckIcon, LoaderIcon, EllipsisVerticalIcon, Co
 
 import data from "./data.json"
 
-// Define your translator type
-type Translator = {
-  index: number
-  HOURLY_RATE: number
-  SOURCE_LANG: string
-  TARGET_LANG: string
-  TRANSLATOR: string
+type DashboardRow = {
+  id: number
+  header: string
+  type: string
+  status: string
+  target: string
+  limit: string
+  reviewer: string
 }
 
-const columns: ColumnDef<Translator>[] = [
+const columns: ColumnDef<DashboardRow>[] = [
   {
     id: "drag",
     header: () => null,
