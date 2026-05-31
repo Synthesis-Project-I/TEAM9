@@ -5,6 +5,16 @@ web/.vite/
 web/.env
 web/*.local
 
+# Data
+data/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
 # API
 API/__pycache__/
 API/*.pyc
