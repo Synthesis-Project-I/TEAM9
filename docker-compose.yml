@@ -8,15 +8,15 @@ services:
       - ./web:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_URL=http://api:8000
+      - VITE_API_URL=http://localhost:8000
     depends_on:
       - api
 
   api:
-    build: ./API/
+    build: ./src/api/
     container_name: api
     ports:
       - "8000:8000"
     volumes:
-      - ./API/:/app/
+      - ./src/api/:/app/
     command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
