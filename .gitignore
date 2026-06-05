@@ -10,6 +10,10 @@ data/raw/
 data/interim/
 data/processed/
 
+# Evaluation outputs
+evaluation/backtest_results.csv
+evaluation/backtest_summary.txt
+
 # Python
 __pycache__/
 *.pyc
