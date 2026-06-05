@@ -4,104 +4,199 @@
 ---
 
 ## Table of Contents
-1. [Project Overview](#project-overview)
+1. [Overview](#overview)
 2. [Pipeline Architecture](#pipeline-architecture)
 3. [File Structure](#file-structure)
 4. [Data Schema Reference](#data-schema-reference)
 5. [Development Workflow](#development-workflow)
-6. [Contribution Guidelines](#contribution-guidelines)
+6. [API Reference](#api-reference)
+7. [Contribution Guidelines](#contribution-guidelines)
 
 ---
 
-## Project Overview #TODO
+## Overview
 
-Explain the objective of the project
+Given an incoming task (client, language pair, time window, deadline, task type), the
+system returns a ranked shortlist of translators who can take it.
+
+**Input** — a task described by these fields:
+
+| Field | Example | Notes |
+|---|---|---|
+| `company_name` | `"Appcelerate"` | Must match a `CLIENT_NAME` in the clients table |
+| `task_date` | `"2024-10-10"` | Planned start date |
+| `task_deadline` | `"2024-10-12"` | Delivery deadline; spans the scheduling window |
+| `task_start_time` | `"09:00"` | Shift start the task should fit into |
+| `task_end_time` | `"17:00"` | Shift end |
+| `task_length_hours` | `3.5` | Effort in hours |
+| `language_pair` | `"English_Spanish (LA)"` | `SOURCE_LANG_TARGET_LANG`; must be a rate column |
+| `task_type` | `"ProofReading"` | `Translation`, `ProofReading`, `Spotcheck`, `TEST`, `Training`, … (defaults to `Translation`) |
+| `followed_by` | `"ProofReading"` | Optional — the next step after this task |
+
+**Output** — a table of up to 10 recommended translators, each row carrying a score
+plus the per-dimension values behind it (language-pair rate, daily capacity, average
+quality, on-time score, and the relevant industry-experience column).
+
+**Two rankers produce the score:**
+- A **rule-based weighted scorer** (`SUITABILITY_SCORE`, 0–100) — used by the CLI.
+- A **trained XGBoost regressor** (`ML_PREDICTED_SCORE`) — used by the API.
+
+Both consume the same eligible-candidate set produced by the constraint engine.
 
 ---
 
-## Pipeline Architecture #TODO
+## Pipeline Architecture
 
-How does our code handle the task?
-How does the data flow through our intended architecture?
+### Data preparation (offline)
+
+Raw sheets (committed as CSVs under `src/api/`) → `data/interim/` → `data/processed/`.
+
+```
+src/api/*.csv ──seed──▶ data/interim/*.csv ──build_processed_data.py──▶ data/processed/*.csv
+```
+
+`build_processed_data.py` calls `prepare_pipeline_tables` (`src/pipeline/features.py`), which:
+- cleans the historical task log (parses timestamps, derives `TASK_LENGTH`,
+  `TRANSLATOR_WORKING_TIME`, and the `ON_TIME` flag, drops invalid rows), and
+- builds the per-translator statistics table (language-pair rates, `AVERAGE_QUALITY`,
+  `ON_TIME_SCORE`, and per-task-type / per-industry experience hours).
+
+`setup_env.py` runs both seeding and building on a fresh clone.
+
+### Recommendation flow (online)
+
+Implemented in `scripts/run_pipeline.py` (CLI) and `src/api/api.py` (HTTP). Stages:
+
+1. **Ingestion** (`ingestion.py`) — validate and normalize the task dict.
+2. **Requirement build** (`filtering.TaskAssignmentCSP.build_client_requirements`) —
+   look up the client's constraints (`SELLING_HOURLY_PRICE` → budget, `MIN_QUALITY`,
+   `MIN_ON_TIME_SCORE`, `WILDCARD`), derive the required sub-industry / industry /
+   industry-group from the client's history, and compute the delivery window. Returns
+   `None` if the client is unknown.
+3. **Constraint filtering with escalation** (`get_translators_with_fallback`) — apply the
+   hard constraints, relaxing one level at a time until candidates appear:
+   `Sub-Industry → Industry → Industry Group → Wildcard → Global`.
+   The **wildcard** step relaxes the single dimension the client nominated:
+   `quality` (lower min quality), `price` (raise budget 25%), or `deadline` (relax
+   on-time / schedule). Hard filters cover: task-type experience, language pair,
+   budget, quality, on-time score, working-day & shift-window availability, daily
+   capacity, and industry experience.
+4. **Splitting fallbacks** — if no single translator fits, try
+   `split_task_across_days` (one translator over the window) and
+   `split_task_across_translators` (a parallel team). Order depends on the wildcard.
+5. **Diagnosis** — if everything fails, `diagnose_bottleneck` prints which constraint
+   eliminated the last candidates, and the pipeline returns an empty result.
+6. **Ranking** — score the eligible set:
+   - `scoring.rank_candidates` → `SUITABILITY_SCORE` (CLI), or
+   - `ml.rank_candidates_ml` → `ML_PREDICTED_SCORE` (API, loads a model from `models/`).
+7. **Output** (`output.format_recommendations`) — select the rationale columns and
+   return the top *N* (default 10).
+
+### Task-type business rules (`get_eligible_translators`)
+
+- **`TEST`** — ignore the budget; pick on quality.
+- **`Training`** — quality and experience requirements dropped.
+- **`Translation` followed by `ProofReading`** — relax the min-quality threshold by 1.
+- **`ProofReading` / `Spotcheck`** — when a previous translator's experience is supplied,
+  require a candidate with *strictly higher* experience than the previous step.
+
+### Ranking weights (`scoring.rank_candidates`)
+
+Base weights (quality / reliability / margin / experience) are `40 / 30 / 20 / 10`, re-weighted by wildcard:
+
+| Mode | Quality | Reliability | Margin | Experience |
+|---|---|---|---|---|
+| balanced | 40 | 30 | 20 | 10 |
+| quality | 60 | 20 | 10 | 10 |
+| price | 20 | 20 | 50 | 10 |
+| deadline | 20 | 60 | 10 | 10 |
+| `TEST` | 80 | 0 | 0 | 20 |
+
+Outside `quality`/`TEST` mode, quality and experience use **resource-conservation**
+normalization: a translator who only just clears the minimum scores higher than an
+over-qualified one, to avoid spending premium talent on low-tier tasks. The XGBoost
+ranker (`ml.py`) targets the same idea via a "Goldilocks" efficiency label (profit
+margin minus an over-specification penalty).
 
 ---
 
 ## File Structure
 
 ```
-tars/
+TEAM9/
 │
 ├── README.md
+├── agents.md                  ← LLM session log (see Contribution Guidelines)
 ├── requirements.txt
+├── docker-compose.yml         ← Runs web + api together for development
+├── setup_env.py               ← One-shot local bootstrap (venv, deps, data)
 ├── .gitignore
-├── .env.example
 │
 ├── data/
-│   ├── raw/                   ← Original files as received. NEVER modify these.
-│   │   └── data.xlsx
-│   ├── interim/               ← Mid-pipeline intermediate outputs (.xlsx converted to csv)
-│   ├── processed/             ← Final cleaned & feature-engineered data ready for the models
-│   └── processing_scripts/    ← Scripts that transform raw → interim → processed
+│   ├── interim/               ← Raw sheets as CSV (seeded from src/api/ by setup_env.py)
+│   ├── processed/             ← Cleaned, model-ready tables the pipeline consumes
+│   └── processing_scripts/
+│       ├── build_processed_data.py   ← interim → processed
+│       ├── csv_extraction.py
+│       └── data_cleaning.py
 │
-├── data_analysis/             ← Comprehensive analysis notebooks to understand the data
+├── data_analysis/             ← EDA & model-experimentation notebooks (not production)
 │
-├── utils/                     ← Shared utilities used across the entire codebase
-│   ├── data_loader.py         ← Load data sheets into DataFrames; shared by all modules
-│   └── config.py              ← Single source of truth for several variables across the code base
+├── utils/                     ← Shared, root-level utilities
+│   ├── data_loader.py         ← Load excel / interim / processed tables
+│   └── config.py              ← Project paths (single source of truth for locations)
 │
-├── models/                    ← Serialized model artifacts ready to be loaded by the pipeline
+├── models/                    ← Serialized model artifacts (xgboost_ranker*.pkl)
 │
 ├── src/
-│   ├── pipeline/              ← Pipeline stages
-│   │   ├── ingestion.py       ← Validate and parse the incoming task
-│   │   ├── filtering.py       ← Hard constraints filtering
-│   │   ├── scoring.py         ← ML model
-│   │   └── output.py          ← Format top-N recommendations with per-dimension rationale
+│   ├── pipeline/              ← Recommendation stages
+│   │   ├── ingestion.py       ← Validate & parse the incoming task
+│   │   ├── filtering.py       ← TaskAssignmentCSP: hard constraints, fallback, splitting
+│   │   ├── features.py        ← Build cleaned history + translator statistics tables
+│   │   ├── scoring.py         ← Rule-based weighted ranker (SUITABILITY_SCORE)
+│   │   ├── ml.py              ← XGBoost training + ML ranker (ML_PREDICTED_SCORE)
+│   │   └── output.py          ← Select rationale columns, return top-N
 │   │
-│   └── api/                   ← Backend API served to the web interface
+│   └── api/                   ← FastAPI backend + committed source CSVs + SQLite builder
+│       ├── api.py
+│       ├── to_db.py / read_db.py
+│       ├── *.csv              ← Committed raw sheets (seed source for data/interim/)
+│       └── Dockerfile
 │
-├── web/                       ← Frontend web interface for project managers
+├── web/                       ← React + Vite + TypeScript frontend (PM-facing UI)
 │
-├── tests/                     ← Testing for different parts of the code
+├── tests/
 │   ├── test_filtering.py
 │   ├── test_scoring.py
-│   └── test_ranking.py
+│   └── test_ranking.py        ← Covers output.format_recommendations
 │
 └── scripts/
-    ├── model_training/        ← Scripts that train and serialize models into models/
-    ├── run_pipeline.py        ← CLI entrypoint: takes a task JSON, prints recommendations
-    └── evaluate.py            ← Backtesting and model evaluation
+    ├── model_training/
+    │   ├── train_ml_ranker.py            ← Trains & serializes the XGBoost ranker
+    │   └── ML_translator_predictor_XGboost.ipynb
+    └── run_pipeline.py        ← CLI entrypoint: task JSON → recommendations
 ```
 
-### Why this structure?
+### Notes on the layout
 
-**`data/raw/` is read-only** — Raw data lives in a protected folder; all transformations produce new files in `interim/` or `processed/`. This makes it easy to re-run everything from scratch.
-
-**`data/interim/`** — Intermediate outputs that are too expensive to recompute every time but aren't the final cleaned dataset yet. For example, the Excel sheets converted to CSVs. Keeping this separate from `processed/` makes it clear what is "done" vs "in progress".
-
-**`data/processing_scripts/`** — All data transformation code lives here, not in notebooks or `src/`.
-
-**`data_analysis/`** — Exploration and findings stay completely separate from both the data transformation scripts and production code. This is not part of the final output; it is only for analytical and exploratory purposes.
-
-**`utils/`** — Shared utilities needed across multiple parts of the codebase. These include functions and classes that can be used anywhere as is.
-
-**`models/`** — Holds serialized model artifacts (e.g. `.pkl`, `.joblib`) ready to be loaded by the pipeline. The scripts that train and produce these models live in `scripts/model_training/`. Nothing in `models/` should be hand-edited; it is always the output of a training script.
-
-**`src/pipeline/`** — The five ordered stages that process an incoming task and produce ranked recommendations. Each stage is a thin module: heavy logic belongs in `utils/` or as dedicated helper functions within the stage file itself.
-
-**`src/api/`** — The web interface needs a backend to call. The API layer sits between the pipeline logic and the web frontend, keeping both sides cleanly decoupled.
-
-**`web/`** — The PM-facing interface. It submits task parameters to `src/api/` and renders the ranked recommendations. Keeping it as a sibling to `src/` (not inside it) signals that it is a separate deployable.
-
-**`tests/`** — Automated checks that verify the project works as expected. Every new piece of pipeline behaviour needs at least one corresponding test here.
-
-**`scripts/`** — Files meant to be run directly from the command line. `run_pipeline.py` is the CLI entrypoint for the recommendation pipeline; `evaluate.py` handles backtesting and model evaluation; `model_training/` contains the scripts that train models and write their artifacts to `models/`.
+- **`utils/` is at the root**, not inside `src/`, so both `src/pipeline/` and
+  `data/processing_scripts/` can import it without a cross-dependency. `config.py`
+  centralizes filesystem paths; `data_loader.py` loads the excel / interim / processed
+  tables.
+- **`data/interim/` and `data/processed/` are git-ignored.** They are regenerated by
+  `setup_env.py` from the CSVs committed under `src/api/`.
+- **`models/`** holds only finalized, versioned artifacts. Training scripts in
+  `scripts/model_training/` produce them; nothing here is hand-edited.
+- **`data_analysis/`** is exploratory only and never imported by production code.
+- **`web/`** is a separate deployable that talks to the backend through `src/api/` only.
 
 ---
 
 ## Data Schema Reference
 
-### `Data` sheet — Historical task log
+### Source sheets
+
+#### `Data` — Historical task log
 
 | Field | Type | Description |
 |---|---|---|
@@ -110,11 +205,11 @@ tars/
 | `TASK_ID` | int | Unique task identifier |
 | `START` | datetime | Planned task start |
 | `END` | datetime | Planned delivery deadline |
-| `TASK_TYPE` | str | Type: Translation, PostEditing, ProofReading, Spotcheck, etc. |
+| `TASK_TYPE` | str | `Translation`, `PostEditing`, `ProofReading`, `Spotcheck`, … |
 | `SOURCE_LANG` | str | Source language |
 | `TARGET_LANG` | str | Target language |
 | `TRANSLATOR` | str | Assigned translator name |
-| `ASSIGNED` | datetime | Time task was pre-assigned (Kanban notification) |
+| `ASSIGNED` | datetime | Pre-assignment time (Kanban notification) |
 | `READY` | datetime | Time translator was told to start |
 | `WORKING` | datetime | Time translator began work |
 | `DELIVERED` | datetime | Time translator delivered |
@@ -123,32 +218,33 @@ tars/
 | `HOURS` | float | Actual hours worked |
 | `HOURLY_RATE` | float | Translator's cost rate |
 | `COST` | float | Total task cost |
-| `QUALITY_EVALUATION` | float | Quality score (scale TBD) |
+| `QUALITY_EVALUATION` | float | Quality score |
 | `MANUFACTURER` | str | Client name |
 | `MANUFACTURER_SECTOR` | str | Client sector (L1) |
 | `MANUFACTURER_INDUSTRY_GROUP` | str | Client industry group (L2) |
 | `MANUFACTURER_INDUSTRY` | str | Client industry (L3) |
 | `MANUFACTURER_SUBINDUSTRY` | str | Client sub-industry (L4) |
 
-### `Schedules` sheet — Translator availability
+#### `Schedules` — Translator availability
 
 | Field | Type | Description |
 |---|---|---|
 | `NAME` | str | Translator name (join key with `Data.TRANSLATOR`) |
 | `START` | time | Workday start time |
 | `END` | time | Workday end time |
-| `MON`–`SUN` | int (0/1) | Working days flag |
+| `MON`, `TUES`, `WED`, `THURS`, `FRI`, `SAT`, `SUN` | int (0/1) | Working-day flags |
 
-### `Clients` sheet — Client constraints
+#### `Clients` — Client constraints
 
 | Field | Type | Description |
 |---|---|---|
 | `CLIENT_NAME` | str | Client name (join key with `Data.MANUFACTURER`) |
-| `SELLING_HOURLY_PRICE` | float | Price billed to client per hour |
+| `SELLING_HOURLY_PRICE` | float | Price billed to client per hour (used as the budget ceiling) |
 | `MIN_QUALITY` | float | Minimum acceptable translator quality score |
-| `WILDCARD` | str | Which constraint to relax when no perfect match: `"Quality"` or `"Price"` |
+| `MIN_ON_TIME_SCORE` | float | Optional minimum on-time score |
+| `WILDCARD` | str | Constraint to relax when no perfect match: `Quality`, `Price`, or `Deadline` |
 
-### `TranslatorsCost+Pairs` sheet — Translator rates & language pairs
+#### `TranslatorsCost+Pairs` — Rates & language pairs
 
 | Field | Type | Description |
 |---|---|---|
@@ -157,34 +253,44 @@ tars/
 | `TARGET_LANG` | str | Target language |
 | `HOURLY_RATE` | float | Cost per hour for this language pair |
 
+### Processed tables (`data/processed/`)
+
+| File | Key columns added beyond the source sheets |
+|---|---|
+| `clean_history.csv` | `TASK_LENGTH`, `TRANSLATOR_WORKING_TIME`, `ON_TIME` (drops PM/ID/timestamp bookkeeping columns) |
+| `clients.csv` | Client constraints, as above |
+| `translator_statistics.csv` | One row per translator: schedule, one rate column per `SOURCE_LANG_TARGET_LANG` pair, `AVERAGE_QUALITY`, `ON_TIME_SCORE`, `<TaskType>_experience`, and `SUB_*` / `IND_*` / `GRP_*` experience-hour columns |
+
 ---
 
 ## Development Workflow
 
 ### Setup
+
 ```bash
-# Clone the project repository from GitHub to your local machine
-git clone https://github.com/Synthesis-Project-I/TEAM9 
+# Clone
+git clone https://github.com/Synthesis-Project-I/TEAM9
+cd TEAM9
 
-# Create a virtual environment for the project
-python -m venv .venv
+# One-shot bootstrap: creates .venv, installs requirements, seeds data/interim/
+# from the CSVs in src/api/, and builds data/processed/
+python setup_env.py
 
-# Activate the virtual environment
-source .venv/bin/activate  # Mac/Linux
-.venv\Scripts\activate  # Windows
-
-# Install all required project dependencies
-pip install -r requirements.txt
-
-# Copy the example environment file to create your local .env configuration file
-cp .env.example .env
+# Activate the environment
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate        # macOS / Linux
 ```
 
-**Setup** prepares the local development environment so the project can run consistently. This usually includes creating a virtual environment, installing dependencies, and making sure the required files and configuration are in place before starting development.
+Flags: `python setup_env.py --no-install` (skip venv/deps) or `--no-data`
+(skip seeding/building). To rebuild only the processed tables later:
 
+```bash
+python data/processing_scripts/build_processed_data.py
+```
 
-### Running the pipeline #TODO
-Create a task JSON file with the fields below and run the CLI entrypoint:
+### Running the pipeline (CLI)
+
+Create a task JSON and run the entrypoint:
 
 ```json
 {
@@ -203,33 +309,68 @@ Create a task JSON file with the fields below and run the CLI entrypoint:
 python scripts/run_pipeline.py task.json
 ```
 
-To rebuild the processed pipeline tables (`clean_history.csv`, `clients.csv`,
-`translator_statistics.csv`) from `data/interim/`, run:
+The CLI ranks with the rule-based scorer and prints the recommendation table (or a
+diagnostic message when no candidate is found).
+
+### Training the ML ranker
 
 ```bash
-python data/processing_scripts/build_processed_data.py
+# --samples N (sampled tasks) or --samples all (full history); --output names the .pkl
+python scripts/model_training/train_ml_ranker.py --samples 200 --output xgboost_ranker.pkl
 ```
 
-### Running tests #TODO
+The serialized model is written to `models/`. The API loads `xgboost_ranker_full.pkl`.
+
+### Running tests
+
 ```bash
 python -m pytest -q
 ```
 
-### Web and API development
-To run the UI and the API in development mode (with live refreshing of code) run:
+### Web and API (development)
+
+Runs the React UI and the FastAPI backend together with live reload:
 
 ```bash
 docker compose up --build
 ```
 
+The UI is served on `http://localhost:5173` and calls the API at
+`http://localhost:8000` (`VITE_API_URL`).
+
+---
+
+## API Reference
+
+FastAPI app in `src/api/api.py`. Data endpoints read the SQLite database built by
+`to_db.py`; `/recommendations` runs the pipeline with the XGBoost ranker.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Health check |
+| `GET` | `/recommendations` | Ranked translators for a task (query params mirror the task fields, plus `top_n`) |
+| `GET` | `/translators` | Translator statistics |
+| `GET` | `/schedules` | Translator schedules |
+| `GET` | `/clients` | Client constraints |
+| `GET` | `/tasks` | Historical tasks |
+
+`/recommendations` returns `{ "data": [...], "task_requirements": {...}, "model": "..." }`,
+or `{ "data": [], "message": "..." }` when the client is unknown or no translator fits.
+
 ---
 
 ## Contribution Guidelines
 
-- Write docstrings for every public function (Google style preferred)
-- Keep pipeline stage files thin — heavy logic belongs in root-level `utils/` or as dedicated helper functions within the stage file itself
-- All new pipeline behaviour needs at least one unit test in `tests/`
-- Update `agents.md` every time you use an LLM to help with the project (see that file)
-- Pin new Python dependencies in `requirements.txt` with exact versions; pin JS dependencies via `package-lock.json`
-- The `web/` frontend communicates with the backend only through `src/api/` — never call pipeline functions directly from the frontend
-- Never commit trained model files from `model_training/` experiments directly to `models/` — only finalized, intentionally versioned artifacts belong there
+- Write docstrings for every public function (Google style preferred).
+- Keep `src/pipeline/` stage files thin — heavy logic belongs in root-level `utils/`
+  or in dedicated helper functions within the stage file.
+- All new pipeline behaviour needs at least one unit test in `tests/`.
+- Update `agents.md` whenever you use an LLM to help with the project (see that file).
+- Pin new Python dependencies in `requirements.txt`; pin JS dependencies via
+  `package-lock.json`.
+- The `web/` frontend communicates with the backend only through `src/api/` — never
+  call pipeline functions directly from the frontend.
+- Train models with `scripts/model_training/`; commit only finalized, intentionally
+  versioned artifacts to `models/` — never experimental outputs.
+</content>
+</invoke>
