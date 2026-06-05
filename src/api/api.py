@@ -10,11 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.pipeline.features import prepare_pipeline_tables
 from src.pipeline.filtering import TaskAssignmentCSP
 from src.pipeline.ml import rank_candidates_ml
 from src.pipeline.output import format_recommendations
-from utils.data_loader import load_interim_data
+from utils.data_loader import load_processed_data
 
 app = FastAPI()
 _pipeline_cache = None
@@ -37,8 +36,7 @@ def get_db_connection():
 def get_pipeline_cache():
     global _pipeline_cache
     if _pipeline_cache is None:
-        data_dict = load_interim_data()
-        history_df, clients_df, translators_df = prepare_pipeline_tables(data_dict)
+        history_df, clients_df, translators_df = load_processed_data()
         _pipeline_cache = {
             "history_df": history_df,
             "clients_df": clients_df,

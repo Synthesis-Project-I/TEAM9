@@ -6,16 +6,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.pipeline.features import prepare_pipeline_tables
 from src.pipeline.filtering import TaskAssignmentCSP
 from src.pipeline.output import format_recommendations
 from src.pipeline.scoring import rank_candidates
-from utils.data_loader import load_interim_data
+from utils.data_loader import load_processed_data
 
 
 def run_pipeline(task):
-    data_dict = load_interim_data()
-    history_df, clients_df, translators_df = prepare_pipeline_tables(data_dict)
+    history_df, clients_df, translators_df = load_processed_data()
     csp_solver = TaskAssignmentCSP(translators_df)
 
     task_requirements = csp_solver.build_client_requirements(

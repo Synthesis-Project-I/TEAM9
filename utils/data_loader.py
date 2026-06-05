@@ -1,6 +1,12 @@
 import pandas as pd
 
-from utils.config import INTERIM_DATA_DIR, RAW_EXCEL_FILE, TRANSLATOR_STATS_FILE
+from utils.config import (
+    CLEAN_HISTORY_FILE,
+    CLIENTS_FILE,
+    INTERIM_DATA_DIR,
+    RAW_EXCEL_FILE,
+    TRANSLATOR_STATS_FILE,
+)
 
 
 def load_excel_data(path=RAW_EXCEL_FILE):
@@ -9,7 +15,7 @@ def load_excel_data(path=RAW_EXCEL_FILE):
 
 
 def load_interim_data(path=INTERIM_DATA_DIR):
-    """Load the CSV files generated from the Excel workbook."""
+    """Load the raw sheets converted to CSV (one row per source record)."""
     return {
         "Data": pd.read_csv(path / "data.csv", low_memory=False),
         "Schedules": pd.read_csv(path / "schedules.csv"),
@@ -18,6 +24,13 @@ def load_interim_data(path=INTERIM_DATA_DIR):
     }
 
 
-def load_translator_statistics(path=TRANSLATOR_STATS_FILE):
-    """Load the processed translator statistics table."""
-    return pd.read_csv(path)
+def load_processed_data():
+    """Load the cleaned, model-ready tables produced by build_processed_data.py.
+
+    Returns:
+        (history_df, clients_df, translators_df) ready for the pipeline.
+    """
+    history_df = pd.read_csv(CLEAN_HISTORY_FILE, low_memory=False)
+    clients_df = pd.read_csv(CLIENTS_FILE)
+    translators_df = pd.read_csv(TRANSLATOR_STATS_FILE)
+    return history_df, clients_df, translators_df

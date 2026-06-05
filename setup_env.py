@@ -7,13 +7,14 @@ Run once after cloning:
 This script:
 1. Creates a local ``.venv`` virtual environment (if it does not exist).
 2. Installs the pinned dependencies from ``requirements.txt`` into it.
-3. Seeds ``data/interim/`` from the CSVs committed under ``src/api/`` so the
-   recommendation pipeline (``scripts/run_pipeline.py`` and the API's
-   ``/recommendations`` endpoint) can run on a fresh clone.
+3. Seeds ``data/interim/`` (raw sheets as CSV) from the CSVs committed under
+   ``src/api/``, then builds ``data/processed/`` from it so the recommendation
+   pipeline (``scripts/run_pipeline.py`` and the API's ``/recommendations``
+   endpoint) can run on a fresh clone.
 
 Flags:
     --no-install   Skip creating the venv / installing requirements.
-    --no-data      Skip seeding ``data/interim/``.
+    --no-data      Skip seeding ``data/interim/`` and building ``data/processed/``.
 
 After it finishes, activate the environment:
     .venv\\Scripts\\activate     (Windows)
@@ -32,6 +33,7 @@ VENV_DIR = ROOT / ".venv"
 REQUIREMENTS = ROOT / "requirements.txt"
 SRC_API_DIR = ROOT / "src" / "api"
 INTERIM_DIR = ROOT / "data" / "interim"
+BUILD_PROCESSED_SCRIPT = ROOT / "data" / "processing_scripts" / "build_processed_data.py"
 
 # Committed source CSV -> filename the data loader expects in data/interim/.
 # See utils/data_loader.load_interim_data.
@@ -82,6 +84,13 @@ def seed_interim_data():
         print(f">> Seeded {INTERIM_DIR / dst_name}")
 
 
+def build_processed_data():
+    """Build data/processed/ from the interim CSVs (the pipeline reads from here)."""
+    python = venv_python() if venv_python().exists() else Path(sys.executable)
+    print(">> Building processed tables")
+    subprocess.check_call([str(python), str(BUILD_PROCESSED_SCRIPT)])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Set up a local TARS dev environment.")
     parser.add_argument("--no-install", action="store_true", help="Skip venv creation and dependency install.")
@@ -94,6 +103,7 @@ def main():
 
     if not args.no_data:
         seed_interim_data()
+        build_processed_data()
 
     print("\nDone. Activate the environment with:")
     if os.name == "nt":

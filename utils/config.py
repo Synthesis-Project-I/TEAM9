@@ -8,4 +8,8 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 MODELS_DIR = PROJECT_ROOT / "models"
 
 RAW_EXCEL_FILE = RAW_DATA_DIR / "data.xlsx"
+
+# Processed, model-ready tables (output of build_processed_data.py).
+CLEAN_HISTORY_FILE = PROCESSED_DATA_DIR / "clean_history.csv"
+CLIENTS_FILE = PROCESSED_DATA_DIR / "clients.csv"
 TRANSLATOR_STATS_FILE = PROCESSED_DATA_DIR / "translator_statistics.csv"

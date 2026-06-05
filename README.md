@@ -203,10 +203,11 @@ Create a task JSON file with the fields below and run the CLI entrypoint:
 python scripts/run_pipeline.py task.json
 ```
 
-To rebuild the processed translator statistics file from `data/interim/`, run:
+To rebuild the processed pipeline tables (`clean_history.csv`, `clients.csv`,
+`translator_statistics.csv`) from `data/interim/`, run:
 
 ```bash
-python data/processing_scripts/build_translator_statistics.py
+python data/processing_scripts/build_processed_data.py
 ```
 
 ### Running tests #TODO
