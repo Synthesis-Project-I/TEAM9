@@ -21,7 +21,7 @@ def calculate_efficiency_score(task_reqs, candidate_row):
     return round(score, 4)
 
 
-def generate_ml_training_data(n_samples, raw_historical_df, clients_df, translators_df, csp_solver):
+def generate_ml_training_data(n_samples, raw_historical_df, clients_df, translators_df, csp_solver, random_state=42):
     """
     Builds the Training Dataset. For every historical task, it extracts the features
     and calculates the Target Label (Y) for the XGBoost model.
@@ -29,7 +29,8 @@ def generate_ml_training_data(n_samples, raw_historical_df, clients_df, translat
     print(f"--- GENERATING ML TRAINING DATA ({n_samples} TASKS) ---")
     training_data = []
 
-    indices = np.random.choice(raw_historical_df.index, n_samples, replace=False)
+    rng = np.random.default_rng(random_state)
+    indices = rng.choice(raw_historical_df.index.to_numpy(), n_samples, replace=False)
 
     for idx in indices:
         row = raw_historical_df.loc[idx]
