@@ -10,8 +10,6 @@
 4. [Data Schema Reference](#data-schema-reference)
 5. [Development Workflow](#development-workflow)
 6. [API Reference](#api-reference)
-7. [Contribution Guidelines](#contribution-guidelines)
-
 ---
 
 ## Overview
@@ -312,6 +310,17 @@ python scripts/run_pipeline.py task.json
 The CLI ranks with the rule-based scorer and prints the recommendation table (or a
 diagnostic message when no candidate is found).
 
+### Running the web app
+
+```bash
+cd web
+npm install      # first time only
+npm run dev
+```
+
+Serves the UI on `http://localhost:5173`. It needs the API running (see
+[Web and API](#web-and-api-development)); point it at the backend via `VITE_API_URL`.
+
 ### Training the ML ranker
 
 ```bash
@@ -358,19 +367,3 @@ FastAPI app in `src/api/api.py`. Data endpoints read the SQLite database built b
 or `{ "data": [], "message": "..." }` when the client is unknown or no translator fits.
 
 ---
-
-## Contribution Guidelines
-
-- Write docstrings for every public function (Google style preferred).
-- Keep `src/pipeline/` stage files thin — heavy logic belongs in root-level `utils/`
-  or in dedicated helper functions within the stage file.
-- All new pipeline behaviour needs at least one unit test in `tests/`.
-- Update `agents.md` whenever you use an LLM to help with the project (see that file).
-- Pin new Python dependencies in `requirements.txt`; pin JS dependencies via
-  `package-lock.json`.
-- The `web/` frontend communicates with the backend only through `src/api/` — never
-  call pipeline functions directly from the frontend.
-- Train models with `scripts/model_training/`; commit only finalized, intentionally
-  versioned artifacts to `models/` — never experimental outputs.
-</content>
-</invoke>
