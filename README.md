@@ -367,3 +367,17 @@ FastAPI app in `src/api/api.py`. Data endpoints read the SQLite database built b
 or `{ "data": [], "message": "..." }` when the client is unknown or no translator fits.
 
 ---
+
+## Evaluation
+
+Backtest the recommender against history: for a sample of past tasks, rebuild the
+requirements, run the pipeline, and check whether the translator actually used shows
+up near the top of the recommendations.
+
+```bash
+python evaluation/backtest.py
+```
+
+Writes `evaluation/backtest_results.csv` (per-task rank and hit) and
+`evaluation/backtest_summary.txt` (hit@N, recall, mean rank). `TOP_N` and `SAMPLES`
+are set at the top of the script.
