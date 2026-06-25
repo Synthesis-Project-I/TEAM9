@@ -1,0 +1,17 @@
+# LaTeX build artifacts
+*.aux
+*.bcf
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+latex/*.pdf
+
+# Plain-article fallback (superseded by the styled tau version)
+latex/tars_report_plain.tex
+tars_report_plain.pdf
